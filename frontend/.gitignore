@@ -1,0 +1,100 @@
+# -----------------------------------------------------------------------------
+# Frontend .gitignore
+# Project detected: React + Vite + Tailwind CSS
+# This file protects the frontend if it is uploaded independently of the repo root.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# Keep package.json and package-lock.json tracked for reproducible installs.
+# -----------------------------------------------------------------------------
+node_modules/
+
+# -----------------------------------------------------------------------------
+# Vite production output and generated bundles
+# -----------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+
+# -----------------------------------------------------------------------------
+# Environment variables and local secrets
+# Keep .env.example tracked as documentation.
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# -----------------------------------------------------------------------------
+# Tool caches and coverage
+# -----------------------------------------------------------------------------
+.cache/
+.vite/
+.vite-inspect/
+.eslintcache
+.stylelintcache
+coverage/
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.out.log
+*.err.log
+
+# -----------------------------------------------------------------------------
+# Package manager caches
+# -----------------------------------------------------------------------------
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# -----------------------------------------------------------------------------
+# Editor and IDE metadata
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# -----------------------------------------------------------------------------
+# OS-generated files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Temporary files and local test artifacts
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+playwright-report/
+test-results/
+lighthouse-report/
+*.har
+
+# -----------------------------------------------------------------------------
+# Deployment provider local state
+# Keep vercel.json tracked; ignore local Vercel/Netlify folders.
+# -----------------------------------------------------------------------------
+.vercel/
+.netlify/
