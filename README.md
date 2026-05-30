@@ -50,9 +50,9 @@ npm run dev
 cd frontend
 npm install
 ```
-Create a `.env` file in the `frontend` directory:
+Create a `.env` file in the `frontend` directory (use the Vite proxy so auth cookies stay same-origin):
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=/api
 ```
 Start the frontend development server:
 ```bash

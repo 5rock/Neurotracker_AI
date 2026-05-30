@@ -3,7 +3,6 @@ const Roadmap = require('../models/Roadmap');
 const Skill = require('../models/Skill');
 const Topic = require('../models/Topic');
 const User = require('../models/User');
-const { v4: uuidv4 } = require('crypto');
 const {
   chatWithMentor,
   generateRoadmap,

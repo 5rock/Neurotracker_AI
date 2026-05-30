@@ -6,8 +6,15 @@ import {
 } from 'lucide-react';
 import { analyticsAPI } from '../services/api';
 import { useAuthState } from '../hooks/useAuthState';
+import { useGuestSession } from '../hooks/useGuestSession';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import DeferredMount from '../components/ui/DeferredMount';
+import GuestBanner from '../components/ui/GuestBanner';
+
+const DemoModeCard = lazy(() => import('../components/guest/DemoModeCard'));
+const GuestProgressCard = lazy(() => import('../components/guest/GuestProgressCard'));
+const GuestAchievements = lazy(() => import('../components/guest/GuestAchievements'));
+const GuestTimeline = lazy(() => import('../components/guest/GuestTimeline'));
 
 const QuizTrendChart = lazy(() => import('../components/charts/DashboardCharts').then((m) => ({ default: m.QuizTrendChart })));
 const SkillRadarChart = lazy(() => import('../components/charts/DashboardCharts').then((m) => ({ default: m.SkillRadarChart })));
@@ -84,10 +91,11 @@ const MetricCard = ({ icon: Icon, label, value, unit, color, sub }) => (
 );
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user } = useAuthState();
+  const { trackFeature, demoModeDismissed } = useGuestSession();
   const [data, setData] = useState(MOCK_DATA);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuthState();
-  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -148,23 +156,48 @@ const Dashboard = () => {
     return 'evening';
   })();
 
+  // Track feature visit for guest session
+  useEffect(() => {
+    if (user?.isGuest) trackFeature('/dashboard');
+  }, [user?.isGuest]); // eslint-disable-line
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      {/* Guest banner – shown after 30s of engagement for guest users */}
+      {user?.isGuest && <GuestBanner />}
+
       <header className="page-enter" style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>
-          Good {greeting},{' '}
-          <span className="gradient-text">{user?.name?.split(' ')[0]} 👋</span>
+          {user?.isGuest
+            ? <>Welcome, <span className="gradient-text">Guest 👋</span></>
+            : <>Good {greeting},{' '}<span className="gradient-text">{user?.name?.split(' ')[0]} 👋</span></>}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>
-          {overview.dueTodayCount > 0
-            ? `You have ${overview.dueTodayCount} topics due for revision today. Keep up the streak!`
-            : "You're all caught up! Great work on your learning streak."}
+          {user?.isGuest
+            ? "You're exploring NeuroTrack AI as a guest. Create a free account to save your progress!"
+            : overview.dueTodayCount > 0
+              ? `You have ${overview.dueTodayCount} topics due for revision today. Keep up the streak!`
+              : "You're all caught up! Great work on your learning streak."}
         </p>
       </header>
+
+      {/* Demo Mode Card – first-time guests who haven't dismissed it */}
+      {user?.isGuest && !demoModeDismissed && (
+        <Suspense fallback={null}>
+          <DemoModeCard />
+        </Suspense>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16, marginBottom: 28 }}>
         {metrics.map((m) => <MetricCard key={m.label} {...m} />)}
       </div>
+
+      {/* Guest Progress Card – shown after metrics for all guests */}
+      {user?.isGuest && (
+        <Suspense fallback={null}>
+          <GuestProgressCard />
+        </Suspense>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
         <div className="chart-container page-enter">
@@ -285,8 +318,21 @@ const Dashboard = () => {
           </button>
         ))}
       </div>
+
+      {/* Guest Achievements + Timeline — rendered below quick actions for guests */}
+      {user?.isGuest && (
+        <>
+          <Suspense fallback={null}>
+            <GuestAchievements />
+          </Suspense>
+          <Suspense fallback={null}>
+            <GuestTimeline />
+          </Suspense>
+        </>
+      )}
     </div>
   );
 };
+
 
 export default Dashboard;

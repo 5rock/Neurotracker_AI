@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, Lock, Play, Sparkles, Star } from 'lucide-react';
 import { aiAPI } from '../services/api';
+import { useAuthState } from '../hooks/useAuthState';
+import { useGuestSession } from '../hooks/useGuestSession';
+import SmartConversionPrompt from '../components/guest/SmartConversionPrompt';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -40,6 +43,14 @@ const CareerRoadmap = () => {
   const [roadmap, setRoadmap] = useState(MOCK_ROADMAP);
   const [generating, setGenerating] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState('Full Stack Developer');
+  const { user } = useAuthState();
+  const { trackFeature, trackRoadmap, session } = useGuestSession();
+  const guestRoadmapsCreated = session?.roadmapsCreated || 0;
+
+  // Track feature visit for guest
+  useEffect(() => {
+    if (user?.isGuest) trackFeature('/career-roadmap');
+  }, [user?.isGuest]); // eslint-disable-line
 
   const generateNew = async () => {
     setGenerating(true);
@@ -51,12 +62,18 @@ const CareerRoadmap = () => {
       toast.success('Roadmap ready! (Demo mode)');
       setRoadmap({ ...MOCK_ROADMAP, careerGoal: selectedGoal });
     } finally {
+      // Track roadmap creation for guest session
+      if (user?.isGuest) trackRoadmap();
       setGenerating(false);
     }
   };
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      {/* Smart conversion after first roadmap for guests */}
+      {user?.isGuest && guestRoadmapsCreated >= 1 && (
+        <SmartConversionPrompt trigger="roadmap_created" />
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>

@@ -4,7 +4,9 @@ const User = require('../models/User');
 const TOKEN_COOKIE_NAME = 'neurotrack_token';
 
 /**
- * Protect routes - verify JWT token and attach user to request
+ * Protect routes - verify JWT token and attach user to request.
+ * Supports both regular and guest users.
+ * Automatically rejects expired guest sessions.
  */
 const protect = async (req, res, next) => {
   try {
@@ -34,6 +36,17 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // ── Guest expiry check ──────────────────────────────────────────────
+    if (user.isGuest && user.guestExpiresAt && new Date() > new Date(user.guestExpiresAt)) {
+      // Clear the cookie so the client doesn't keep retrying
+      clearTokenCookie(res);
+      return res.status(401).json({
+        success: false,
+        code: 'GUEST_EXPIRED',
+        message: 'Your guest session has expired. Please create a free account to continue.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -48,14 +61,16 @@ const protect = async (req, res, next) => {
 };
 
 /**
- * Restrict to specific roles
+ * Restrict to specific roles.
+ * Example: authorize('student', 'admin') – blocks 'guest' role.
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Role '${req.user.role}' is not authorized to access this route.`,
+        code: 'GUEST_RESTRICTED',
+        message: `This feature requires a registered account. Create a free account to access it.`,
       });
     }
     next();
@@ -63,29 +78,79 @@ const authorize = (...roles) => {
 };
 
 /**
- * Generate JWT Token
+ * Middleware: block guest users from accessing a route.
+ * Sends a structured response the frontend can intercept to show the upgrade modal.
  */
-const generateToken = (id) => {
+const requireRegistered = (req, res, next) => {
+  if (req.user?.isGuest) {
+    return res.status(403).json({
+      success: false,
+      code: 'GUEST_RESTRICTED',
+      message: 'Create an account to unlock this feature and save your progress permanently.',
+    });
+  }
+  next();
+};
+
+const GUEST_AI_DAILY_LIMIT = 3;
+
+/**
+ * Enforce daily AI usage cap for guest accounts on expensive AI routes.
+ */
+const enforceGuestAiLimit = async (req, res, next) => {
+  if (!req.user?.isGuest) return next();
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found. Token is invalid.' });
+    }
+
+    const withinLimit = await user.checkAndIncrementGuestAiUsage(GUEST_AI_DAILY_LIMIT);
+    if (!withinLimit) {
+      return res.status(429).json({
+        success: false,
+        code: 'GUEST_AI_LIMIT',
+        message: `Guest users are limited to ${GUEST_AI_DAILY_LIMIT} AI analyses per day. Create a free account for unlimited access.`,
+        limit: GUEST_AI_DAILY_LIMIT,
+        used: user.guestAiUsageCount,
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Generate JWT Token
+ * @param {string} id - User ID
+ * @param {string} [customExpiry] - Override default expiry (e.g. '24h' for guests)
+ */
+const generateToken = (id, customExpiry) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: customExpiry || process.env.JWT_EXPIRES_IN || '7d',
   });
 };
 
-const cookieMaxAge = () => {
+const cookieMaxAge = (customMs) => {
+  if (customMs) return customMs;
   const days = Number(process.env.JWT_COOKIE_EXPIRES_DAYS || 7);
   return days * 24 * 60 * 60 * 1000;
 };
 
-const cookieOptions = () => ({
+const cookieOptions = (customMaxAgeMs) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: cookieMaxAge(),
+  maxAge: cookieMaxAge(customMaxAgeMs),
   path: '/',
 });
 
-const setTokenCookie = (res, token) => {
-  res.cookie(TOKEN_COOKIE_NAME, token, cookieOptions());
+const setTokenCookie = (res, token, customMaxAgeMs) => {
+  res.cookie(TOKEN_COOKIE_NAME, token, cookieOptions(customMaxAgeMs));
 };
 
 const clearTokenCookie = (res) => {
@@ -98,6 +163,8 @@ const clearTokenCookie = (res) => {
 module.exports = {
   protect,
   authorize,
+  requireRegistered,
+  enforceGuestAiLimit,
   generateToken,
   setTokenCookie,
   clearTokenCookie,

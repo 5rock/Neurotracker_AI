@@ -1,0 +1,45 @@
+{
+  "name": "NeuroTrack AI",
+  "short_name": "NeuroTrack",
+  "description": "AI-powered learning platform to track memory, close skill gaps, and accelerate your career.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#6366f1",
+  "background_color": "#0f0f1a",
+  "categories": ["education", "productivity"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "AI Mentor",
+      "short_name": "AI Chat",
+      "description": "Chat with your AI learning mentor",
+      "url": "/ai-mentor",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Career Roadmap",
+      "short_name": "Roadmap",
+      "description": "View your AI-generated career roadmap",
+      "url": "/career-roadmap",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your learning dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

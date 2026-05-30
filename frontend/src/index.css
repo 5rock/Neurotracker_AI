@@ -443,3 +443,168 @@ button:disabled {
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
 }
+
+/* ===========================
+   GUEST MODE STYLES
+   =========================== */
+
+/* Guest badge – amber pulsing glow for navbar */
+.badge-guest {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fbbf24;
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(239,68,68,0.08));
+  border: 1px solid rgba(245,158,11,0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.badge-guest:hover {
+  background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(239,68,68,0.14));
+  border-color: rgba(245,158,11,0.5);
+  box-shadow: 0 0 14px rgba(245,158,11,0.2);
+}
+
+/* Amber pulse glow animation for the guest badge */
+@keyframes pulse-glow-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  50%       { box-shadow: 0 0 12px 2px rgba(245,158,11,0.22); }
+}
+
+/* Guest "Continue as Guest" button – dashed outline style */
+.btn-guest {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  border-style: dashed !important;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+}
+.btn-guest:hover {
+  border-color: rgba(99,102,241,0.5) !important;
+  background: rgba(99,102,241,0.05);
+  color: var(--text-primary);
+}
+
+/* Slide-up animation for the guest banner */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(24px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Guest info chip shown in sidebar/profile sections */
+.guest-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+/* AI usage limit warning bar (shown in AI Mentor when guest is near limit) */
+.guest-ai-limit-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  font-size: 13px;
+  color: #fbbf24;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTERPRISE GUEST MODE – Phase 2 Animations & Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Achievement unlock pop — bouncy scale-up */
+@keyframes achievementPop {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-8deg); }
+  60%  { opacity: 1; transform: scale(1.15) rotate(3deg); }
+  80%  { transform: scale(0.95) rotate(-1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Achievement glow pulse — subtle shimmer on earned badges */
+@keyframes achievementGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+  50%       { box-shadow: 0 0 16px 2px rgba(99,102,241,0.18); }
+}
+
+/* Floating particles for UpgradeSuccess background */
+@keyframes particleFloat {
+  0%   { transform: translateY(0) scale(1); opacity: 0.4; }
+  50%  { transform: translateY(-24px) scale(1.2); opacity: 0.7; }
+  100% { transform: translateY(0) scale(1); opacity: 0.4; }
+}
+
+/* Fade in up — SmartConversionPrompt entrance */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade in (generic) */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Spin animation for loading states */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Pulse glow for logo and important elements */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.3); }
+  50%       { box-shadow: 0 0 40px rgba(99,102,241,0.6), 0 0 60px rgba(139,92,246,0.3); }
+}
+
+/* ── Achievement Shelf Scrollbar Hide ─────────────────────────── */
+.achievement-shelf {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.achievement-shelf::-webkit-scrollbar { display: none; }
+.achievement-shelf { scrollbar-width: none; }
+
+/* ── PWA Install Banner ───────────────────────────────────────── */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  animation: slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+/* ── Mobile Optimizations ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .pwa-install-banner {
+    width: calc(100% - 32px);
+    max-width: 340px;
+  }
+}

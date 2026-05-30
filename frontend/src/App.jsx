@@ -22,17 +22,28 @@ const AIMentor = lazy(() => import('./pages/AIMentor'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const UpgradeSuccess = lazy(() => import('./pages/UpgradeSuccess'));
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuthState();
+  if (import.meta.env.DEV && !loading) {
+    console.log('[ProtectedRoute]', { isAuthenticated, path: window.location.pathname });
+  }
   if (loading) return <LoadingSpinner fullscreen />;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuthState();
+  const { isAuthenticated, loading, user } = useAuthState();
+  if (import.meta.env.DEV && !loading) {
+    console.log('[PublicRoute]', { isAuthenticated, isGuest: user?.isGuest, path: window.location.pathname });
+  }
   if (loading) return <LoadingSpinner fullscreen />;
-  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+  // Guests are "authenticated" but must still access login/signup to upgrade
+  if (isAuthenticated && !user?.isGuest) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
 };
 
 function AppRoutes() {
@@ -97,6 +108,16 @@ function AppRoutes() {
         <Route path="profile" element={<Suspense fallback={<LoadingSpinner />}><Profile /></Suspense>} />
         <Route path="leaderboard" element={<Suspense fallback={<LoadingSpinner />}><Leaderboard /></Suspense>} />
       </Route>
+
+      {/* Upgrade success page — public, no auth guard */}
+      <Route
+        path="/upgrade-success"
+        element={(
+          <Suspense fallback={<LoadingSpinner fullscreen />}>
+            <UpgradeSuccess />
+          </Suspense>
+        )}
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,6 +1,9 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react';
-import { Send, Brain, Trash2, Sparkles, User } from 'lucide-react';
-import { aiAPI } from '../services/api';
+import { Send, Brain, Trash2, Sparkles, User, Zap } from 'lucide-react';
+import { aiAPI, GUEST_AI_LIMIT_EVENT } from '../services/api';
+import { useAuthState } from '../hooks/useAuthState';
+import { useGuestSession } from '../hooks/useGuestSession';
+import SmartConversionPrompt from '../components/guest/SmartConversionPrompt';
 
 const MarkdownRenderer = lazy(() => import('../components/chat/MarkdownRenderer'));
 
@@ -94,7 +97,25 @@ const AIMentor = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [guestLimitHit, setGuestLimitHit] = useState(false);
   const bottomRef = useRef(null);
+  const { user } = useAuthState();
+  const { trackFeature, trackAI, session } = useGuestSession();
+
+  // Track feature visit
+  useEffect(() => {
+    if (user?.isGuest) trackFeature('/ai-mentor');
+  }, [user?.isGuest]); // eslint-disable-line
+
+  // Listen for guest AI limit event
+  useEffect(() => {
+    const onLimit = () => setGuestLimitHit(true);
+    window.addEventListener(GUEST_AI_LIMIT_EVENT, onLimit);
+    return () => window.removeEventListener(GUEST_AI_LIMIT_EVENT, onLimit);
+  }, []);
+
+  const guestAnalysesUsed = session?.aiAnalysesCount || 0;
+  const GUEST_AI_LIMIT = 3;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -116,6 +137,8 @@ const AIMentor = () => {
         content: res.data.response,
         timestamp: Date.now(),
       }]);
+      // Track AI analysis for guest session
+      if (user?.isGuest) trackAI();
     } catch (err) {
       const errMsg = err.response?.status === 503
         ? "⚠️ AI service is currently unavailable. Please add your OpenAI API key in the backend `.env` file to enable AI features."
@@ -144,6 +167,33 @@ const AIMentor = () => {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Guest AI usage bar */}
+      {user?.isGuest && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '8px 14px', marginBottom: 12,
+          background: guestAnalysesUsed >= 2 ? 'rgba(245,158,11,0.08)' : 'rgba(99,102,241,0.06)',
+          border: `1px solid ${guestAnalysesUsed >= 2 ? 'rgba(245,158,11,0.2)' : 'rgba(99,102,241,0.12)'}`,
+          borderRadius: 10, fontSize: 12,
+          color: guestAnalysesUsed >= 2 ? '#fbbf24' : 'var(--text-muted)',
+        }}>
+          <Zap size={13} />
+          <span>Guest AI analyses: <strong>{guestAnalysesUsed}/{GUEST_AI_LIMIT}</strong> used today</span>
+          {guestAnalysesUsed >= 2 && (
+            <button
+              onClick={() => window.location.href = '/signup'}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fbbf24', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Upgrade for unlimited →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Smart conversion after 2 analyses */}
+      {user?.isGuest && guestAnalysesUsed >= 2 && (
+        <SmartConversionPrompt trigger="ai_limit_approaching" />
+      )}
       <header style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 0 16px 0',

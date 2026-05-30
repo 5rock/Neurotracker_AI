@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const connectDB = require('./config/db');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { startGuestCleanup } = require('./services/guestCleanup');
 
 const authRoutes = require('./routes/authRoutes');
 const topicRoutes = require('./routes/topicRoutes');
@@ -26,9 +27,15 @@ if (missingEnv.length) {
   process.exit(1);
 }
 
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const parseClientOrigins = () => {
+  const raw = process.env.CLIENT_URL || 'http://localhost:5173,http://127.0.0.1:5173';
+  return raw.split(',').map((o) => o.trim()).filter(Boolean);
+};
+
+const clientOrigins = parseClientOrigins();
 
 connectDB();
+startGuestCleanup();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -41,7 +48,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", clientUrl],
+      connectSrc: ["'self'", ...clientOrigins],
       fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
@@ -59,7 +66,13 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: clientUrl,
+  origin(origin, callback) {
+    if (!origin || clientOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -75,9 +88,10 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: process.env.NODE_ENV === 'development' ? 200 : 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.originalUrl.endsWith('/auth/health'),
   message: { success: false, message: 'Too many auth attempts. Please try again later.' },
 });
 
@@ -119,11 +133,11 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   NeuroTrack AI Server
   ====================
-  Running on port ${PORT}
+  Running on 0.0.0.0:${PORT}
   Mode: ${process.env.NODE_ENV}
   API: http://localhost:${PORT}/api
   `);

@@ -2,12 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary SEO -->
+    <title>NeuroTrack AI – AI-Powered Learning Platform</title>
+    <meta name="description" content="Track your memory retention, close skill gaps, generate AI career roadmaps, and accelerate your learning journey with NeuroTrack AI." />
+    <meta name="keywords" content="AI learning, career roadmap, skill gap analysis, memory tracker, spaced repetition, learning platform" />
+    <meta name="author" content="NeuroTrack AI" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Theme + PWA -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NeuroTrack" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NeuroTrack AI – AI-Powered Learning Platform" />
+    <meta property="og:description" content="Master skills faster with AI-powered memory tracking, skill gap analysis, and personalized career roadmaps." />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta property="og:url" content="https://neurotrack.ai" />
+    <meta property="og:site_name" content="NeuroTrack AI" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NeuroTrack AI – AI-Powered Learning Platform" />
+    <meta name="twitter:description" content="AI career roadmaps, skill gap analysis, and smart memory tracking to accelerate your learning." />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://neurotrack.ai" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((reg) => {
+              console.log('[SW] Registered:', reg.scope);
+            })
+            .catch((err) => {
+              console.warn('[SW] Registration failed:', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

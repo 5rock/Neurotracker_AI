@@ -2,7 +2,8 @@ import { memo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Brain, LayoutDashboard, BookOpen, AlertTriangle, Calendar,
-  Zap, Map, MessageSquare, BarChart2, User, Trophy, ChevronLeft
+  Zap, Map, MessageSquare, BarChart2, User, Trophy, ChevronLeft,
+  UserCircle, ArrowRight
 } from 'lucide-react';
 import { useAuthState } from '../../hooks/useAuthState';
 import { useAuthActions } from '../../hooks/useAuthActions';
@@ -140,50 +141,133 @@ const Sidebar = ({ isOpen, onToggle }) => {
         </button>
 
         {user && (
-          <button
-            type="button"
-            onClick={handleLogout}
-            aria-label="Log out"
-            title="Log out"
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 10,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              cursor: 'pointer',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              fontSize: 14,
-              fontWeight: 700,
-              color: 'white',
-            }}>
-              {user.name?.charAt(0).toUpperCase()}
-            </div>
-            {isOpen && (
-              <div className="sidebar-label" style={{ overflow: 'hidden', flex: 1, textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user.name}
+          user.isGuest ? (
+            /* Guest sidebar bottom section */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Guest avatar + label */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: 'rgba(245,158,11,0.06)',
+                border: '1px solid rgba(245,158,11,0.15)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <UserCircle size={20} color="white" />
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  Logout
-                </div>
+                {isOpen && (
+                  <div className="sidebar-label" style={{ overflow: 'hidden', flex: 1, textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', whiteSpace: 'nowrap' }}>
+                      Guest Mode
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      Session expires in 24h
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </button>
+
+              {/* Sign Up CTA button */}
+              {isOpen && (
+                <button
+                  id="sidebar-guest-signup-btn"
+                  type="button"
+                  onClick={() => navigate('/signup')}
+                  aria-label="Create a free account"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '9px 12px',
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 14px rgba(99,102,241,0.3)',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <ArrowRight size={13} />
+                  Sign Up Free
+                </button>
+              )}
+
+              {/* End guest session button */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="End guest session"
+                title="End guest session"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isOpen ? 'center' : 'center',
+                  gap: 6,
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-muted)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                {isOpen ? 'End Session' : '✕'}
+              </button>
+            </div>
+          ) : (
+            /* Regular user sidebar bottom section */
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Log out"
+              title="Log out"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, fontSize: 14, fontWeight: 700, color: 'white',
+              }}>
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+              {isOpen && (
+                <div className="sidebar-label" style={{ overflow: 'hidden', flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    Logout
+                  </div>
+                </div>
+              )}
+            </button>
+          )
         )}
       </div>
     </aside>

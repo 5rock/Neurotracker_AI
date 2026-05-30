@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu, Sun, Moon, UserCircle, ArrowRight } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthState } from '../../hooks/useAuthState';
 
@@ -61,8 +61,38 @@ const Navbar = ({ onMenuToggle }) => {
 
       {/* Right side actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Streak badge */}
-        {user?.streak > 0 && (
+        {/* Guest Mode badge – shown when user is a guest */}
+        {user?.isGuest && (
+          <button
+            id="navbar-guest-badge-btn"
+            type="button"
+            onClick={() => navigate('/signup')}
+            title="Create a free account to save your progress"
+            aria-label="Guest mode active – click to create an account"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 12px',
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(239,68,68,0.08))',
+              border: '1px solid rgba(245,158,11,0.3)',
+              borderRadius: 99,
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#fbbf24',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              animation: 'pulse-glow-amber 2s ease-in-out infinite',
+            }}
+          >
+            <UserCircle size={14} />
+            Guest Mode
+            <ArrowRight size={11} style={{ opacity: 0.7 }} />
+          </button>
+        )}
+
+        {/* Streak badge – only for registered users with a streak */}
+        {!user?.isGuest && user?.streak > 0 && (
           <div style={{
             display: 'flex',
             alignItems: 'center',

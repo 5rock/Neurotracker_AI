@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Brain, Eye, EyeOff, ArrowRight, Lock, Mail, User, Target } from 'lucide-react';
+import { Brain, Eye, EyeOff, ArrowRight, Lock, Mail, User, Target, UserCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthState } from '../hooks/useAuthState';
+import GuestRecovery from '../components/guest/GuestRecovery';
+import { getAuthErrorMessage } from '../utils/authErrors';
 import toast from 'react-hot-toast';
 
 const careerGoals = [
@@ -14,20 +17,53 @@ const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', careerGoal: 'Full Stack Developer' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [guestLoading, setGuestLoading] = useState(false);
+  const { register, loginAsGuest } = useAuth();
+  const { user } = useAuthState();
   const navigate = useNavigate();
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    console.log('[Signup] Starting guest login...');
+    try {
+      await loginAsGuest();
+      console.log('[Signup] Guest login OK — redirecting to /dashboard');
+      toast.success('Welcome! Exploring as Guest 👤', { duration: 3000 });
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('[Signup] Guest login error:', err);
+      toast.error(getAuthErrorMessage(err, 'Could not start guest session.'));
+    } finally {
+      setGuestLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) return toast.error('Please fill in all fields.');
     if (form.password.length < 6) return toast.error('Password must be at least 6 characters.');
+
+    // Capture guest state BEFORE register clears it
+    const wasGuest = Boolean(user?.isGuest);
+    const guestId = user?.guestId;
+
     setLoading(true);
+    console.log('[Signup] Submitting registration...', { email: form.email, wasGuest, guestId });
     try {
-      await register(form);
+      const result = await register({ ...form, guestId: guestId || undefined });
+      console.log('[Signup] Registration OK:', result);
+      console.log('[Signup] Auth state updated — redirecting...');
       toast.success('Welcome to NeuroTrack AI! 🎉');
-      navigate('/dashboard');
+      if (wasGuest && guestId) {
+        console.log('[Signup] Redirect → /upgrade-success');
+        navigate('/upgrade-success');
+      } else {
+        console.log('[Signup] Redirect → /dashboard');
+        navigate('/dashboard');
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed.');
+      console.error('[Signup] Registration error:', err);
+      toast.error(getAuthErrorMessage(err, 'Registration failed.'));
     } finally {
       setLoading(false);
     }
@@ -70,6 +106,9 @@ const Signup = () => {
         </div>
 
         <div className="glass" style={{ padding: 28, borderRadius: 20 }}>
+          {/* Recovery UI for expired guest sessions */}
+          <GuestRecovery />
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 7 }}>Full Name</label>
@@ -131,6 +170,25 @@ const Signup = () => {
         <p style={{ textAlign: 'center', marginTop: 18, fontSize: 14, color: 'var(--text-secondary)' }}>
           Already have an account?{' '}
           <Link to="/login" style={{ color: '#818cf8', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+        </p>
+
+        {/* Guest shortcut */}
+        <p style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: 'var(--text-muted)' }}>
+          Just exploring?{' '}
+          <button
+            id="signup-guest-shortcut-btn"
+            type="button"
+            onClick={handleGuestLogin}
+            disabled={guestLoading}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#818cf8', fontWeight: 600, fontSize: 'inherit',
+              padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <UserCircle size={14} />
+            Continue as Guest &rarr;
+          </button>
         </p>
       </div>
     </div>

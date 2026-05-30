@@ -1,8 +1,12 @@
 const User = require('../models/User');
 const Analytics = require('../models/Analytics');
+const ChatHistory = require('../models/ChatHistory');
+const Topic = require('../models/Topic');
+const Roadmap = require('../models/Roadmap');
 const { generateToken, setTokenCookie, clearTokenCookie } = require('../middleware/auth');
 const crypto = require('crypto');
 
+/** Serialize user for API responses */
 const serializeUser = (user) => ({
   _id: user._id,
   name: user.name,
@@ -15,6 +19,11 @@ const serializeUser = (user) => ({
   level: user.level,
   careerReadinessScore: user.careerReadinessScore,
   badges: user.badges,
+  // Guest fields
+  isGuest: user.isGuest || false,
+  guestId: user.guestId || null,
+  guestExpiresAt: user.guestExpiresAt || null,
+  guestAiUsageCount: user.guestAiUsageCount || 0,
 });
 
 /**
@@ -24,7 +33,7 @@ const serializeUser = (user) => ({
  */
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, careerGoal } = req.body;
+    const { name, email, password, careerGoal, guestId } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -37,6 +46,11 @@ const register = async (req, res, next) => {
 
     // Create initial analytics record
     await Analytics.create({ userId: user._id });
+
+    // ── Migrate guest data if a guestId was provided ─────────────────────
+    if (guestId) {
+      await migrateGuestData(guestId, user._id);
+    }
 
     const token = generateToken(user._id);
     setTokenCookie(res, token);
@@ -65,7 +79,7 @@ const login = async (req, res, next) => {
     }
 
     // Find user with password
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email, isGuest: { $ne: true } }).select('+password');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
@@ -90,6 +104,94 @@ const login = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * @desc    Guest login – create a temporary guest session
+ * @route   POST /api/auth/guest
+ * @access  Public
+ */
+const guestLogin = async (req, res, next) => {
+  try {
+    const GUEST_EXPIRY_HOURS = 24;
+    const guestExpiresAt = new Date(Date.now() + GUEST_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    // Generate a stable unique ID for migration tracking
+    const guestId = crypto.randomBytes(16).toString('hex');
+
+    // Create a temporary guest user document
+    const guest = await User.create({
+      name: 'Guest User',
+      email: undefined,    // No email for guests
+      password: undefined, // No password for guests
+      role: 'guest',
+      isGuest: true,
+      guestId,
+      guestExpiresAt,
+      careerGoal: 'Full Stack Developer',
+    });
+
+    // Generate a 24h JWT and align cookie lifetime with token expiry
+    const guestCookieMs = 24 * 60 * 60 * 1000;
+    const token = generateToken(guest._id, '24h');
+    setTokenCookie(res, token, guestCookieMs);
+
+    res.status(201).json({
+      success: true,
+      message: 'Guest session created!',
+      user: serializeUser(guest),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Migrate guest data to a newly registered account
+ * @route   POST /api/auth/migrate-guest
+ * @access  Private
+ */
+const migrateGuest = async (req, res, next) => {
+  try {
+    const { guestId } = req.body;
+    if (!guestId) {
+      return res.status(400).json({ success: false, message: 'guestId is required.' });
+    }
+
+    await migrateGuestData(guestId, req.user._id);
+
+    res.json({ success: true, message: 'Guest data migrated successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Internal helper: Transfer guest data → real user, then delete the guest.
+ */
+const migrateGuestData = async (guestId, newUserId) => {
+  try {
+    // Find the guest user document
+    const guestUser = await User.findOne({ guestId, isGuest: true });
+    if (!guestUser) return; // No guest to migrate (may have expired)
+
+    const guestUserId = guestUser._id;
+
+    // Re-associate all guest data to the new real user in parallel
+    await Promise.all([
+      ChatHistory.updateMany({ userId: guestUserId }, { $set: { userId: newUserId } }),
+      Topic.updateMany({ userId: guestUserId }, { $set: { userId: newUserId } }),
+      Roadmap.updateMany({ userId: guestUserId }, { $set: { userId: newUserId } }),
+    ]);
+
+    // Clean up the temporary guest user document
+    await User.findByIdAndDelete(guestUserId);
+
+    console.log(`[GuestMigration] Migrated guest ${guestId} → user ${newUserId}`);
+  } catch (err) {
+    // Non-fatal: log but don't block registration
+    console.error(`[GuestMigration] Failed for guestId ${guestId}:`, err.message);
   }
 };
 
@@ -174,7 +276,7 @@ const changePassword = async (req, res, next) => {
  */
 const forgotPassword = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email, isGuest: { $ne: true } });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'No account found with that email.' });
@@ -231,4 +333,41 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, logout, getMe, updateProfile, changePassword, forgotPassword, resetPassword };
+/**
+ * @desc    Auth Health Check
+ * @route   GET /api/auth/health
+ * @access  Public
+ */
+const healthCheck = async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const dbWorks = mongoose.connection.readyState === 1;
+
+    res.json({
+      success: true,
+      auth: 'healthy',
+      database: dbWorks,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      auth: 'unhealthy',
+      error: err.message,
+    });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  guestLogin,
+  migrateGuest,
+  logout,
+  getMe,
+  updateProfile,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  healthCheck,
+};

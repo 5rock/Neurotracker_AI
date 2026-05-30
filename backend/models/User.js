@@ -11,21 +11,24 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      // Optional for guest accounts
+      required: false,
       unique: true,
+      sparse: true, // Allows multiple null values (multiple guests)
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      // Optional for guest accounts
+      required: false,
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
     role: {
       type: String,
-      enum: ['student', 'admin'],
+      enum: ['student', 'admin', 'guest'],
       default: 'student',
     },
     avatar: {
@@ -90,6 +93,37 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     emailVerificationToken: String,
+
+    // ─── Guest Mode Fields ───────────────────────────────────────────────
+    /** Whether this is a temporary guest account */
+    isGuest: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    /** When the guest session expires (24h from creation) */
+    guestExpiresAt: {
+      type: Date,
+      default: null,
+      index: true, // Used by cleanup service
+    },
+    /** Unique stable identifier for guest → real-user migration */
+    guestId: {
+      type: String,
+      default: null,
+      sparse: true,
+      index: true,
+    },
+    /** Number of AI analyses the guest has used today */
+    guestAiUsageCount: {
+      type: Number,
+      default: 0,
+    },
+    /** The date (midnight UTC) on which the current AI usage count applies */
+    guestAiUsageDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -98,7 +132,7 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving (Mongoose 7+: async hooks must not use next())
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password') || !this.password) return;
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
 });
@@ -121,6 +155,30 @@ userSchema.methods.updateStreak = function () {
     this.streak = 1;
   }
   this.lastActive = now;
+};
+
+/**
+ * Check and update guest AI usage.
+ * Returns true if the guest is within the daily limit, false if exceeded.
+ */
+userSchema.methods.checkAndIncrementGuestAiUsage = async function (dailyLimit = 3) {
+  const todayMidnight = new Date();
+  todayMidnight.setUTCHours(0, 0, 0, 0);
+
+  // Reset counter if it's a new day
+  const lastUsageDay = this.guestAiUsageDate ? new Date(this.guestAiUsageDate) : null;
+  if (!lastUsageDay || lastUsageDay < todayMidnight) {
+    this.guestAiUsageCount = 0;
+    this.guestAiUsageDate = todayMidnight;
+  }
+
+  if (this.guestAiUsageCount >= dailyLimit) {
+    return false; // Limit exceeded
+  }
+
+  this.guestAiUsageCount += 1;
+  await this.save({ validateBeforeSave: false });
+  return true;
 };
 
 module.exports = mongoose.model('User', userSchema);
